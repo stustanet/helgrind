@@ -5,9 +5,15 @@
 package main
 
 import (
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,6 +21,39 @@ import (
 	"net/http"
 	"time"
 )
+
+func loadPrivKey(filepath string) (key *rsa.PrivateKey, err error) {
+	bytes, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(bytes)
+	if block == nil {
+		return nil, errors.New("no key in private key file found")
+	}
+
+	switch block.Type {
+	case "RSA PRIVATE KEY":
+		key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		return
+	case "PRIVATE KEY":
+		var ikey interface{}
+		ikey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if key, ok := ikey.(*rsa.PrivateKey); ok {
+			return key, nil
+		}
+	}
+	return nil, errors.New("unsupported private key type")
+}
 
 func main() {
 	var cfg config
@@ -24,17 +63,35 @@ func main() {
 	}
 	fmt.Println(cfg)
 
-	caCert, err := ioutil.ReadFile(cfg.CaCert)
+	caCertBytes, err := ioutil.ReadFile(cfg.CaCert)
 	if err != nil {
 		log.Fatal(err)
 	}
 	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
+	caCertPool.AppendCertsFromPEM(caCertBytes)
+
+	privKey, err := loadPrivKey(cfg.ServerPrivKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// sign := func(m string) string {
+	// 	sig, _ := rsa.SignPKCS1v15(rand.Reader, privKey, 0, []byte(m))
+	// 	return hex.EncodeToString(sig)
+	// }
+	rng := rand.Reader
+	sign := func(m string) string {
+		hashed := sha256.Sum256([]byte(m))
+		sig, _ := rsa.SignPKCS1v15(rng, privKey, crypto.SHA256, hashed[:])
+		return hex.EncodeToString(sig)
+	}
 
 	// http server config
 	server := &http.Server{
-		Addr:    cfg.Listen,
-		Handler: &authHandler{Services: cfg.Services},
+		Addr: cfg.Listen,
+		Handler: &authHandler{
+			Services: cfg.Services,
+			Sign:     sign,
+		},
 		TLSConfig: &tls.Config{
 			// security settings
 			MinVersion:               tls.VersionTLS12,
@@ -78,6 +135,7 @@ func sendHTTPErr(w http.ResponseWriter, code int) {
 
 type authHandler struct {
 	Services map[string]service
+	Sign     func(m string) string
 }
 
 func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -112,6 +170,11 @@ func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sendHTTPErr(w, http.StatusForbidden)
 		return
 	}
+
+	info := infoHeader(ci.User.ID, ci.User.Name, ci.Device)
+	sig := ah.Sign(info)
+	r.Header.Set("X-Helgrind-Info", info)
+	r.Header.Set("X-Helgrind-Sig", sig)
 
 	service.Proxy.ServeHTTP(w, r)
 }
