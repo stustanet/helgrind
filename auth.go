@@ -1,3 +1,7 @@
+// Copyright 2018 Julien Schmidt. All rights reserved.
+// Use of this source code is governed by a MIT-style license that can be found
+// in the LICENSE file.
+
 package main
 
 import (
@@ -11,28 +15,27 @@ import (
 	"time"
 )
 
-const (
-	caCertPath          = "ca/ca.crt"
-	serverCertChainPath = "server/fullchain.pem"
-	serverPrivKeyPath   = "server/privkey.pem"
-	listenAddr          = ":80"
-)
-
 func main() {
-	caCert, err := ioutil.ReadFile(caCertPath)
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(cfg)
+
+	caCert, err := ioutil.ReadFile(cfg.CaCert)
 	if err != nil {
 		log.Fatal(err)
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 
+	// http server config
 	server := &http.Server{
-		Addr:    listenAddr,
+		Addr:    cfg.Listen,
 		Handler: &authHandler{},
 		TLSConfig: &tls.Config{
-			// Security Settings
+			// security settings
 			MinVersion:               tls.VersionTLS12,
-			CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
 			PreferServerCipherSuites: true,
 			CipherSuites: []uint16{
 				// Mozilla recommended ciphers (modern)
@@ -48,32 +51,28 @@ func main() {
 				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
 				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
 			},
+			CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
 
-			// Client Certs
+			// client certs
 			ClientAuth: tls.RequireAndVerifyClientCert,
 			ClientCAs:  caCertPool,
-			//VerifyPeerCertificate: verifyClientCert,
 		},
 
-		// Timeouts
+		// timeouts
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
-	fmt.Println(server.ListenAndServeTLS(serverCertChainPath, serverPrivKeyPath))
-}
 
-// func verifyClientCert(rawCerts [][]byte, _ [][]*x509.Certificate) error {
-// 	if len(rawCerts) != 1 {
-// 		return errors.New("must provide exactly one client cert")
-// 	}
-// 	log.Println("sha256", sha256.Sum256(rawCerts[0]))
-// 	return nil
-// }
+	// start serving HTTPS
+	if err = server.ListenAndServeTLS(cfg.ServerCertChain, cfg.ServerPrivKey); err != nil {
+		log.Fatal(err)
+	}
+}
 
 type authHandler struct{}
 
-func (a *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// get client certificate
 	certs := r.TLS.PeerCertificates
 	if len(certs) != 1 {

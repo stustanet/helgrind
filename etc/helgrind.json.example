@@ -1,0 +1,32 @@
+{
+    "listen": "127.0.0.1:1337",
+    "caCert": "ca/ca.crt",
+    "serverCertChain": "server/fullchain.pem",
+    "serverPrivKey": "server/privkey.pem",
+    "services": {
+        "nuclearreactor.helgrind.example.com": {
+            "enabled": true,
+            "target": "https://nuclearreactor.internal/",
+            "users": {
+                "js": {
+                    "enabled": true,
+                    "name": "Julien Schmidt",
+                    "devices": [{
+                        "enabled": true,
+                        "name": "Macbook",
+                        "sha256": "F6:BA:03:58:98:10:1A:77:FD:0E:50:47:19:FD:4A:D1:06:1C:7F:13:CF:E2:A0:64:F4:20:C3:F6:E3:8D:7F:A7"
+                    }]
+                },
+                "dead": {
+                    "enabled": false,
+                    "name": "Deactivated User",
+                    "devices": [{
+                        "enabled": true,
+                        "name": "SmartCoffin",
+                        "sha256": "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2"
+                    }]
+                }
+            }
+        }
+    }
+}
