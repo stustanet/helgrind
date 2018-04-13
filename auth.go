@@ -16,7 +16,8 @@ import (
 )
 
 func main() {
-	cfg, err := loadConfig()
+	var cfg config
+	err := cfg.parseFile("etc/helgrind.json")
 	if err != nil {
 		log.Fatal(err)
 	}
