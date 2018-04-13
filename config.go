@@ -7,6 +7,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http/httputil"
+	"net/url"
 	"os"
 )
 
@@ -93,8 +95,8 @@ type certInfo struct {
 }
 
 type service struct {
-	Target     string
 	ValidCerts map[[32]byte]certInfo
+	Proxy      *httputil.ReverseProxy
 }
 
 type config struct {
@@ -125,9 +127,14 @@ func (cfg *config) parseFile(filepath string) (err error) {
 			continue
 		}
 
+		target, err := url.ParseRequestURI(js.Target)
+		if err != nil {
+			return err
+		}
+
 		s := service{
-			Target:     js.Target,
 			ValidCerts: make(map[[32]byte]certInfo),
+			Proxy:      newReverseProxy(target),
 		}
 
 		for id, ju := range js.Users {

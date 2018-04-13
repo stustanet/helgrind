@@ -89,6 +89,7 @@ func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	cert := certs[0]
 
+	// find config for requested service
 	host, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
 		sendHTTPErr(w, http.StatusInternalServerError)
@@ -112,5 +113,5 @@ func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintln(w, "Hello", ci.User.Name, "(", ci.User.ID, ") on Device", ci.Device)
+	service.Proxy.ServeHTTP(w, r)
 }
