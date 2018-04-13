@@ -132,7 +132,7 @@ func (cfg *config) parseFile(filepath string) (err error) {
 
 		for id, ju := range js.Users {
 			if !ju.Enabled {
-				//continue
+				continue
 			}
 
 			u := user{
