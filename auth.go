@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"time"
 )
@@ -33,7 +34,7 @@ func main() {
 	// http server config
 	server := &http.Server{
 		Addr:    cfg.Listen,
-		Handler: &authHandler{},
+		Handler: &authHandler{Services: cfg.Services},
 		TLSConfig: &tls.Config{
 			// security settings
 			MinVersion:               tls.VersionTLS12,
@@ -71,7 +72,13 @@ func main() {
 	}
 }
 
-type authHandler struct{}
+func sendHTTPErr(w http.ResponseWriter, code int) {
+	http.Error(w, http.StatusText(code), code)
+}
+
+type authHandler struct {
+	Services map[string]service
+}
 
 func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// get client certificate
@@ -82,14 +89,28 @@ func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	cert := certs[0]
 
+	host, _, err := net.SplitHostPort(r.Host)
+	if err != nil {
+		sendHTTPErr(w, http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
+	service, ok := ah.Services[host]
+	if !ok {
+		sendHTTPErr(w, http.StatusForbidden)
+		return
+	}
+
 	// calculate SHA-256 fingerprint
 	fp := sha256.Sum256(cert.Raw)
 
 	// fingerprint must be whitelisted for target
-	if fp == fp {
-		http.Error(w, "Account not active", http.StatusForbidden)
+	ci, ok := service.ValidCerts[fp]
+	if !ok {
+		sendHTTPErr(w, http.StatusForbidden)
 		return
 	}
 
-	w.Write([]byte("<proxied content>"))
+	fmt.Fprintln(w, "Hello", ci.User.Name, "(", ci.User.ID, ") on Device", ci.Device)
 }
