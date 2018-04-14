@@ -10,3 +10,6 @@ User=helgrind
 Group=helgrind
 
 Restart=always
+
+[Install]
+WantedBy=multi-user.target
