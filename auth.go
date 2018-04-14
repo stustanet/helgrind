@@ -14,8 +14,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"io/ioutil"
-	"log"
-	"net"
 	"net/http"
 	"strings"
 )
