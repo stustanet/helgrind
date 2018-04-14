@@ -127,7 +127,7 @@ func (cfg *config) parseFile(filepath string) (err error) {
 			continue
 		}
 
-		target, err := url.ParseRequestURI(js.Target)
+		target, err := url.Parse(js.Target)
 		if err != nil {
 			return err
 		}
