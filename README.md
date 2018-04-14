@@ -70,6 +70,7 @@ Then the `client.csr` (the private key must not be shared) has to be sent to the
 
 ```sh
 openssl x509 -req -days 730 -sha256 -in client.csr -CA ca.crt -CAkey ca.key -set_serial 1 -out client.crt
+openssl x509 -noout -fingerprint -sha256 -inform pem -in client.crt
 ```
 
 The SHA256 fingerprint of the certificate is required to grant access to a backend service, which can be configured in the `/etc/helgrind.json` on the helgrind server.
