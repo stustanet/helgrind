@@ -28,8 +28,8 @@ func newReverseProxy(target *url.URL) *httputil.ReverseProxy {
 	}
 }
 
-func infoHeader(username, id, device string) string {
+func infoHeader(id, name, device string) string {
 	return "i=" + url.QueryEscape(id) +
-		"&u=" + url.QueryEscape(username) +
+		"&n=" + url.QueryEscape(name) +
 		"&d=" + url.QueryEscape(device)
 }
