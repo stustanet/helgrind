@@ -1,0 +1,12 @@
+[Unit]
+Description=Helgrind Authentication Gateway
+
+[Service]
+ExecStart=/usr/local/bin/helgrind
+
+NonBlocking=true
+
+User=helgrind
+Group=helgrind
+
+Restart=always
