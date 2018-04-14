@@ -17,6 +17,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 )
 
 func loadCaCert(filepath string) (*x509.CertPool, error) {
@@ -86,6 +87,18 @@ func sendHTTPErr(w http.ResponseWriter, code int) {
 	http.Error(w, http.StatusText(code), code)
 }
 
+// copied from net/url/url.go
+func stripPort(hostport string) string {
+	colon := strings.IndexByte(hostport, ':')
+	if colon == -1 {
+		return hostport
+	}
+	if i := strings.IndexByte(hostport, ']'); i != -1 {
+		return strings.TrimPrefix(hostport[:i], "[")
+	}
+	return hostport[:colon]
+}
+
 type authHandler struct {
 	Services map[string]service
 	Sign     func(m string) string
@@ -101,13 +114,7 @@ func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cert := certs[0]
 
 	// find config for requested service
-	host, _, err := net.SplitHostPort(r.Host)
-	if err != nil {
-		sendHTTPErr(w, http.StatusInternalServerError)
-		log.Println(err)
-		return
-	}
-
+	host := stripPort(r.Host)
 	service, ok := ah.Services[host]
 	if !ok {
 		sendHTTPErr(w, http.StatusForbidden)
