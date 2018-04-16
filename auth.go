@@ -99,7 +99,6 @@ func stripPort(hostport string) string {
 
 type authHandler struct {
 	Services map[string]service
-	Sign     func(m string) string
 }
 
 func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -129,10 +128,8 @@ func (ah *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info := infoHeader(ci.User.ID, ci.User.Name, ci.Device)
-	sig := ah.Sign(info)
-	r.Header.Set("X-Helgrind-Info", info)
-	r.Header.Set("X-Helgrind-Sig", sig)
+	r.Header.Set("X-Helgrind-Info", ci.Header.Info)
+	r.Header.Set("X-Helgrind-Sig", ci.Header.Sig)
 
 	service.Proxy.ServeHTTP(w, r)
 }

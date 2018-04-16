@@ -92,6 +92,10 @@ type user struct {
 type certInfo struct {
 	Device string
 	User   *user
+	Header struct {
+		Info string
+		Sig  string
+	}
 }
 
 type service struct {
@@ -173,4 +177,21 @@ func (cfg *config) parseFile(filepath string) (err error) {
 	cfg.ServerPrivKey = jc.ServerPrivKey
 	cfg.Services = services
 	return
+}
+
+func (cfg *config) precomputeAuthHeaders() error {
+	sign, err := signFuncFromPrivKey(cfg.ServerPrivKey)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range cfg.Services {
+		for fp, ci := range s.ValidCerts {
+			info := infoHeader(ci.User.ID, ci.User.Name, ci.Device)
+			ci.Header.Info = info
+			ci.Header.Sig = sign(info)
+			s.ValidCerts[fp] = ci
+		}
+	}
+	return nil
 }

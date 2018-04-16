@@ -15,7 +15,12 @@ import (
 
 func main() {
 	var cfg config
-	err := cfg.parseFile("/etc/helgrind.json")
+	err := cfg.parseFile("etc/helgrind.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = cfg.precomputeAuthHeaders()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,16 +30,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sign, err := signFuncFromPrivKey(cfg.ServerPrivKey)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// http server config
 	server := &http.Server{
 		Handler: &authHandler{
 			Services: cfg.Services,
-			Sign:     sign,
 		},
 		TLSConfig: &tls.Config{
 			// security settings
