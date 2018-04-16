@@ -46,25 +46,40 @@ type verifyFunc func(m, sig string) bool
 // A Verifier is used to verify and parse the information received from the
 // gateway.
 type Verifier struct {
-	verify verifyFunc
+	cache  cache
+	pubKey *rsa.PublicKey
+}
+
+func (v *Verifier) verify(m, sig string) bool {
+	// check cache first
+	if actualSig, cached := v.cache.get(m); cached {
+		return sig == actualSig
+	}
+
+	// verify hashed message
+	rawsig, _ := hex.DecodeString(sig)
+	hashed := sha256.Sum256([]byte(m))
+	if rsa.VerifyPKCS1v15(v.pubKey, crypto.SHA256, hashed[:], rawsig) == nil {
+		// add to cache if valid
+		v.cache.set(m, sig)
+		return true
+	}
+	return false
 }
 
 // NewVerifier creates a new Verifier using the given public key to verify the
 // helgrind headers.
 // The public key matching the private key of the helgrind gateway should be used.
-func NewVerifier(pubkeyPath string) (verifier Verifier, err error) {
-	pubKey, err := loadPubKey(pubkeyPath)
+func NewVerifier(pubkeyPath string) (verifier *Verifier, err error) {
+	verifier = new(Verifier)
+
+	verifier.pubKey, err = loadPubKey(pubkeyPath)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	return Verifier{
-		verify: func(m, sig string) bool {
-			rawsig, _ := hex.DecodeString(sig)
-			hashed := sha256.Sum256([]byte(m))
-			return rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hashed[:], rawsig) == nil
-		},
-	}, nil
+	verifier.cache.reset()
+	return
 }
 
 // ParseInfo extracts the information from the helgrind gateway in the given
