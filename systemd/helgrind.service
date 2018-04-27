@@ -3,13 +3,25 @@ Description=Helgrind Authentication Gateway
 
 [Service]
 ExecStart=/usr/local/bin/helgrind
+Restart=always
 
 NonBlocking=true
 
 User=helgrind
 Group=helgrind
 
-Restart=always
+# hardening
+MemoryDenyWriteExecute=true
+NoNewPrivileges=yes
+PrivateDevices=true
+PrivateUsers=true
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_INET6
 
 [Install]
 WantedBy=multi-user.target
