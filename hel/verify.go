@@ -5,41 +5,11 @@
 package hel
 
 import (
-	"crypto"
-	"crypto/rsa"
+	"crypto/hmac"
 	"crypto/sha256"
-	"crypto/x509"
-	"encoding/hex"
-	"encoding/pem"
-	"errors"
-	"io/ioutil"
+	"encoding/base64"
 	"net/http"
 )
-
-func loadPubKey(filepath string) (key *rsa.PublicKey, err error) {
-	bytes, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-	block, _ := pem.Decode(bytes)
-	if block == nil {
-		return nil, errors.New("no key in public key file found")
-	}
-	if block.Type == "PUBLIC KEY" {
-		var ikey interface{}
-		ikey, err = x509.ParsePKIXPublicKey(block.Bytes)
-		if err != nil {
-			key, err = x509.ParsePKCS1PublicKey(block.Bytes)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if key, ok := ikey.(*rsa.PublicKey); ok {
-			return key, nil
-		}
-	}
-	return nil, errors.New("unsupported private key type")
-}
 
 type verifyFunc func(m, sig string) bool
 
@@ -47,33 +17,43 @@ type verifyFunc func(m, sig string) bool
 // gateway.
 type Verifier struct {
 	cache  cache
-	pubKey *rsa.PublicKey
+	secret []byte
 }
 
 func (v *Verifier) verify(m, sig string) bool {
+	if len(sig) != 44 {
+		return false
+	}
+
 	// check cache first
 	if actualSig, cached := v.cache.get(m); cached {
 		return sig == actualSig
 	}
 
 	// verify hashed message
-	rawsig, _ := hex.DecodeString(sig)
-	hashed := sha256.Sum256([]byte(m))
-	if rsa.VerifyPKCS1v15(v.pubKey, crypto.SHA256, hashed[:], rawsig) == nil {
+	mac, err := base64.StdEncoding.DecodeString(sig)
+	if err != nil {
+		return false
+	}
+
+	hash := hmac.New(sha256.New, v.secret)
+	hash.Write([]byte(m))
+	actualMac := hash.Sum(nil)
+
+	if hmac.Equal(mac, actualMac) {
 		// add to cache if valid
-		v.cache.set(m, sig)
+		v.cache.set(m, base64.StdEncoding.EncodeToString(actualMac))
 		return true
 	}
 	return false
 }
 
-// NewVerifier creates a new Verifier using the given public key to verify the
-// helgrind headers.
-// The public key matching the private key of the helgrind gateway should be used.
-func NewVerifier(pubkeyPath string) (verifier *Verifier, err error) {
+// NewVerifier creates a new Verifier using the given base64 encoded secret to
+// verify the helgrind headers.
+func NewVerifier(secret string) (verifier *Verifier, err error) {
 	verifier = new(Verifier)
 
-	verifier.pubKey, err = loadPubKey(pubkeyPath)
+	verifier.secret, err = base64.StdEncoding.DecodeString(secret)
 	if err != nil {
 		return nil, err
 	}

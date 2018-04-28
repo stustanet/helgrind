@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http/httputil"
@@ -22,6 +23,7 @@ type jsonConfig struct {
 		Enabled bool
 		Host    string
 		Target  string
+		Secret  string
 		Users   map[string]struct {
 			Enabled bool
 			Name    string
@@ -99,6 +101,7 @@ type certInfo struct {
 }
 
 type service struct {
+	Secret     []byte
 	ValidCerts map[[32]byte]certInfo
 	Proxy      *httputil.ReverseProxy
 }
@@ -136,7 +139,13 @@ func (cfg *config) parseFile(filepath string) (err error) {
 			return err
 		}
 
+		secret, err := base64.StdEncoding.DecodeString(js.Secret)
+		if err != nil {
+			return err
+		}
+
 		s := service{
+			Secret:     secret,
 			ValidCerts: make(map[[32]byte]certInfo),
 			Proxy:      newReverseProxy(target),
 		}
@@ -180,16 +189,11 @@ func (cfg *config) parseFile(filepath string) (err error) {
 }
 
 func (cfg *config) precomputeAuthHeaders() error {
-	sign, err := signFuncFromPrivKey(cfg.ServerPrivKey)
-	if err != nil {
-		return err
-	}
-
 	for _, s := range cfg.Services {
 		for fp, ci := range s.ValidCerts {
 			info := infoHeader(ci.User.ID, ci.User.Name, ci.Device)
 			ci.Header.Info = info
-			ci.Header.Sig = sign(info)
+			ci.Header.Sig = sign(s.Secret, []byte(info))
 			s.ValidCerts[fp] = ci
 		}
 	}

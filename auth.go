@@ -5,13 +5,10 @@
 package main
 
 import (
-	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
+	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/hex"
-	"encoding/pem"
+	"encoding/base64"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -30,55 +27,10 @@ func loadCaCert(filepath string) (*x509.CertPool, error) {
 	return caCertPool, nil
 }
 
-func loadPrivKey(filepath string) (key *rsa.PrivateKey, err error) {
-	bytes, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-	block, _ := pem.Decode(bytes)
-	if block == nil {
-		return nil, errors.New("no key in private key file found")
-	}
-
-	switch block.Type {
-	case "RSA PRIVATE KEY":
-		key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		return
-	case "PRIVATE KEY":
-		var ikey interface{}
-		ikey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if key, ok := ikey.(*rsa.PrivateKey); ok {
-			return key, nil
-		}
-	}
-	return nil, errors.New("unsupported private key type")
-}
-
-func signFuncFromPrivKey(filepath string) (func(m string) string, error) {
-	privKey, err := loadPrivKey(filepath)
-	if err != nil {
-		return nil, err
-	}
-	// sign := func(m string) string {
-	//  sig, _ := rsa.SignPKCS1v15(rand.Reader, privKey, 0, []byte(m))
-	//  return hex.EncodeToString(sig)
-	// }
-	rng := rand.Reader
-	sign := func(m string) string {
-		hashed := sha256.Sum256([]byte(m))
-		sig, _ := rsa.SignPKCS1v15(rng, privKey, crypto.SHA256, hashed[:])
-		return hex.EncodeToString(sig)
-	}
-	return sign, nil
+func sign(key, data []byte) string {
+	mac := hmac.New(sha256.New, key)
+	mac.Write(data)
+	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
 }
 
 func sendHTTPErr(w http.ResponseWriter, code int) {
