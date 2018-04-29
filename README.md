@@ -101,3 +101,7 @@ Chrome: Import in the system keychain instead, which is used by Chrome.
 
 ## Access Revocation
 Access can easily be managed in `/etc/helgrind.json`. Either the user can be removed entirely or the specific user or user device can be set to `Enabled = false`.
+
+## TODO
+- create a signature (HMAC) for the whole request body and selected headers
+- include a timestamp in the HMAC
