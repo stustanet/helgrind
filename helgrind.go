@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/tls"
+	"flag"
 	"log"
 	"net/http"
 	"time"
@@ -14,8 +15,12 @@ import (
 )
 
 func main() {
+	var cfgFile string
+	flag.StringVar(&cfgFile, "cfg", "/etc/helgrind.json", "path of the config file")
+	flag.Parse()
+
 	var cfg config
-	err := cfg.parseFile("etc/helgrind.json")
+	err := cfg.parseFile(cfgFile)
 	if err != nil {
 		log.Fatal(err)
 	}
