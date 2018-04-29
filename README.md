@@ -57,6 +57,18 @@ systemctl enable helgrind.socket helgrind.service
 systemctl start helgrind.socket helgrind.service
 ```
 
+## Adding a Service
+Create a new entry in `services` in the `/etc/helgrind.json` and set the target (URL to be reverse-proxied). HTTPS should be used.
+
+Also set a unique base64 encoded secret (which will be shared with the backend) to create the HMAC signatures.
+You can for example generate a random 64 bytes (the length of the secret does not need to be 64 bytes) long base64 string as follows:
+
+```sh
+base64 --wrap=0 /dev/urandom |head -c 64
+```
+
+The backend server should verify the signature and parse the user information sent by the helgrind server. For that, the [`hel`](https://godoc.org/gitlab.stusta.de/stustanet/helgrind/hel) package can be used.
+
 
 ## Adding a User
 First the **user** has to generate a private key and a signing request for it:
