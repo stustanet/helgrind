@@ -170,7 +170,7 @@ func encoded_sha256sum(filename string) (sha256sum string) {
 	return
 }
 
-func generateAndApplyCert(cfgfile, csr, outfile string) {
+func generateAndApplyCert(cfgfile, csr, device, outfile string) {
 	cfg := openConfig(cfgfile)
 
 	if csr == "" {
@@ -201,13 +201,15 @@ func generateAndApplyCert(cfgfile, csr, outfile string) {
 			user.Name, csr_service)
 	}
 
-	// The device name could be included in the certificate - but that would
-	// mean that the config generated here could not be reused - this way
-	// it can be ensured, that the devicename has a seperate source of trust.
-	print("Please enter the device name for this key, or CTRL+C to cancel\n")
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	device := scanner.Text()
+	if device == "" {
+		// The device name could be included in the certificate - but that would
+		// mean that the config generated here could not be reused - this way
+		// it can be ensured, that the devicename has a seperate source of trust.
+		print("Please enter the device name for this key, or CTRL+C to cancel\n")
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		device := scanner.Text()
+	}
 
 	cmd := exec.Command("openssl", "x509", "-req",
 		"-in", csr,
@@ -401,7 +403,7 @@ func main() {
 	case "config":
 		generateCSRConfig(cfgfile, service, alias, name, email, out)
 	case "apply":
-		generateAndApplyCert(cfgfile, csr, out)
+		generateAndApplyCert(cfgfile, csr, device, out)
 	case "list":
 		list(cfgfile, service)
 	case "revoke":
@@ -411,7 +413,7 @@ func main() {
 	default:
 		print("Available Actions: \n")
 		print("  config -cfg [] -service [] -alias [] -name [] -email [] [-out []]\n")
-		print("  apply -cfg [] -csr []\n")
+		print("  apply -cfg [] -csr [] [-device []]\n")
 		print("  list -cfg [] [-service []]\n")
 		print("  revoke -cfg [] -alias [] [-device []]\n")
 		print("  reenable -cfg [] -alias [] [-device []]\n")
