@@ -122,7 +122,9 @@ emailAddress = %s
 ## 3. Send the client.csr to your administrator (telling him to helgrindctl --action sign --csr client.csr --out client.cert)
 ## 4. the file client.key will NEVER EVER leave your device.
 ## 5. Receive your certificate client.cert
-## 6. Install the cert and private key in your firefox: search for "certificate" -> view certificates -> Your Certificates -> [Import]
+## 6. Pack your client cert and your private key together for firefox:
+# openssl pkcs12 -export -in client.cert -inkey client.key -out authenticate-helgrind.p12
+## 7. Install the cert and private key in your firefox: search for "certificate" -> view certificates -> Your Certificates -> [Import]
 `,
 		service, name, alias, email)
 
@@ -215,6 +217,8 @@ func generateAndApplyCert(cfgfile, csr, device, outfile string) {
 		"-in", csr,
 		"-CA", cfg.ServerCertChain,
 		"-CAkey", cfg.ServerPrivKey,
+		"-CAcreateserial",
+		"-days 35600",
 		"-out", outfile,
 	)
 
