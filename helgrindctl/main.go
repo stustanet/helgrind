@@ -208,7 +208,7 @@ func generateAndApplyCert(cfgfile, csr, device, outfile string) {
 		print("Please enter the device name for this key, or CTRL+C to cancel\n")
 		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Scan()
-		device := scanner.Text()
+		device = scanner.Text()
 	}
 
 	cmd := exec.Command("openssl", "x509", "-req",
