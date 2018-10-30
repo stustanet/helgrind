@@ -218,7 +218,7 @@ func generateAndApplyCert(cfgfile, csr, device, outfile string) {
 		"-CA", cfg.ServerCertChain,
 		"-CAkey", cfg.ServerPrivKey,
 		"-CAcreateserial",
-		"-days 35600",
+		"-days", "35600",
 		"-out", outfile,
 	)
 
