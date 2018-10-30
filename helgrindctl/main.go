@@ -215,7 +215,7 @@ func generateAndApplyCert(cfgfile, csr, device, outfile string) {
 
 	cmd := exec.Command("openssl", "x509", "-req",
 		"-in", csr,
-		"-CA", cfg.ServerCertChain,
+		"-CA", cfg.CaCert,
 		"-CAkey", cfg.ServerPrivKey,
 		"-CAcreateserial",
 		"-days", "35600",
