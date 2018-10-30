@@ -114,3 +114,8 @@ Options:
 * `-service` the service to grant access to
 * `-alias` the user to modify
 * `-device` (optional) the device to modify. If omitted, the whole user will be deactivated
+
+# ZSH Integration
+
+To enable zsh autocompletion you either have to include the directory containing the `_helgrindctl.zsh` into your FPATH variable (`export FPATH='/path/to/here/:$FPATH`)
+or copy the file `_helgrindctl.zsh` to `/usr/share/zsh/5.6.2/functions/Completion/Linux` (where zsh will search for it)
