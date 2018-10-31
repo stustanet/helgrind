@@ -125,7 +125,7 @@ emailAddress = %s
 # openssl pkcs12 -export -in client.cert -inkey client.key -out authenticate-helgrind.p12
 ## 7. Install the cert and private key in your firefox: search for "certificate" -> view certificates -> Your Certificates -> [Import]
 `,
-		service, name, alias, email)
+		service, alias, name, email)
 
 	if outfile == "" {
 		print(csr_config)
@@ -192,8 +192,8 @@ func generateAndApplyCert(cfgfile, csr, device, outfile string) {
 
 	// grab the service, and the user-alias from the csr
 	csr_service := csrdata.Subject.Organization[0]
-	csr_name := csrdata.Subject.OrganizationalUnit[0]
-	csr_alias := csrdata.Subject.CommonName
+	csr_alias := csrdata.Subject.OrganizationalUnit[0]
+	csr_name := csrdata.Subject.CommonName
 
 	service, ok := cfg.Services[csr_service]
 	if !ok {
