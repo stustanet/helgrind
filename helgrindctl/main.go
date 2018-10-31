@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -155,20 +154,27 @@ func loadCSR(filename string) (csr *x509.CertificateRequest) {
 	}
 	return
 }
-func encoded_sha256sum(filename string) (sha256sum string) {
+func encoded_sha256sum(filename string) (hexSha256 string) {
 	// Read back the certificate, to generate the checksum
-	f, err := os.Open(filename)
+	// convert PEM encoded openssl cert to DER
+
+	bindata, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatal("read generated cert ", err)
-	}
-	defer f.Close()
-
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not open cert", err)
 	}
 
-	sha256sum = hex.EncodeToString(h.Sum(nil))
+	block, _ := pem.Decode(bindata)
+	if block == nil || block.Type != "CERTIFICATE" {
+		log.Fatal("this is no CSR")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		log.Fatal("Could not parse cert", err)
+	}
+
+	shasum := sha256.Sum256(cert.Raw)
+	hexSha256 = hex.EncodeToString(shasum[:])
 	return
 }
 
