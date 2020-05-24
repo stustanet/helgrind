@@ -6,6 +6,7 @@
     "services": {
         "nuclearreactor.helgrind.example.com": {
             "enabled": true,
+            "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
             "target": "https://nuclearreactor.internal/",
             "users": {
                 "js": {
